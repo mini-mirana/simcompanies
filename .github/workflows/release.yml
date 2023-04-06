@@ -1,0 +1,23 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - master
+jobs:
+  release:
+    name: release
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+      contents: write
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 18
+      - run: yarn install
+      - run: yarn run build
+      - run: yarn semantic-release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
