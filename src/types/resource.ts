@@ -4,6 +4,31 @@ export type ResourceRetailInfo = {
   saturation: number
 }
 
+export type ResourceEncyclopedia = {
+  averageRetailPrice: number
+  baseSalary: number
+  db_letter: number
+  exchangeTradable: boolean
+  image: string
+  // improvesQualityOf:
+  marketSaturation: number
+  marketSaturationLabel: string
+  name: string
+  // neededFor: 
+  producedAnHour: number
+  producedAt: string
+  // producedFrom:
+  realmAvailable: boolean
+  research: boolean
+  // retailData:
+  retailable: boolean
+  soldAt: string
+  // soldAtRestaurant: 
+  storeBaseSalary: number
+  transportNeeded: number
+  transportation: number
+}
+
 export type Seller = {
   id: number
   company: string
@@ -29,6 +54,7 @@ export type ResourceOffer = {
 
 export type ResourceData = {
   dbLetter: number
+  name: string
   averagePrice: number
   wage: number
   saturation: number

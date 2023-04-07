@@ -23,7 +23,7 @@ import { Button, PageButton } from '../Button'
 import { ResourceData } from '@/types/resource'
 
 type TableProps = {
-  columns: ColumnDef<ResourceData, number>[]
+  columns: ColumnDef<ResourceData, any>[]
   data: ResourceData[]
 }
 

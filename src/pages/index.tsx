@@ -2,7 +2,7 @@ import Head from 'next/head'
 import { useEffect, useState } from 'react'
 import { createColumnHelper } from '@tanstack/react-table'
 import { Filter, Table } from '@/components/Table'
-import { ResourceRetailInfo, ResourceOffer, ResourceData } from '@/types/resource'
+import { ResourceRetailInfo, ResourceOffer, ResourceData, ResourceEncyclopedia } from '@/types/resource'
 import { calculateRetailDemand, calculateSaturation } from '@/utils/math'
 import { QUALITY_LEVELS, RETAIL_MODELING } from '@/data/resource'
 
@@ -12,6 +12,11 @@ const columns = [
   columnHelper.accessor((row) => row.dbLetter, {
     id: 'ID',
     header: () => 'ID',
+    cell: (info) => info.getValue()
+  }),
+  columnHelper.accessor((row) => row.name, {
+    id: 'Name',
+    header: () => 'Name',
     cell: (info) => info.getValue()
   }),
   columnHelper.accessor((row) => row.quality, {
@@ -70,44 +75,54 @@ export default function Home() {
 
   useEffect(() => {
     const fetchData = async () => {
-      const res = await fetch('https://www.simcompanies.com/api/v4/1/resources-retail-info/')
-      const resourcesRetailInfo: ResourceRetailInfo[] = await res.json()
+      const resourcesRetailInfoRes = await fetch('https://www.simcompanies.com/api/v4/1/resources-retail-info/')
+      const resourcesRetailInfo: ResourceRetailInfo[] = await resourcesRetailInfoRes.json()
 
-      const resourcesData: ResourceData[] = []
-      for (const resourceRetailInfo of resourcesRetailInfo) {
-        const res = await fetch(`https://www.simcompanies.com/api/v3/market/1/${resourceRetailInfo.dbLetter}/`)
-        const offers: ResourceOffer[] = await res.json()
+      const encyclopediaOffersPromises: Promise<Response>[] = []
+      resourcesRetailInfo.forEach((resourceRetailInfo) => {
+        encyclopediaOffersPromises.push(
+          fetch(`https://www.simcompanies.com/api/v4/en/1/encyclopedia/resources/1/${resourceRetailInfo.dbLetter}/`),
+          fetch(`https://www.simcompanies.com/api/v3/market/1/${resourceRetailInfo.dbLetter}/`)
+        )
+      })
+      const encyclopediaOffersRes = await Promise.all(encyclopediaOffersPromises)
+      const encyclopediaOffers = await Promise.all(encyclopediaOffersRes.map((apiResponse) => apiResponse.json()))
 
-        Array.from(Array(QUALITY_LEVELS).keys()).forEach((quality) => {
-          const saturationFinal = calculateSaturation(resourceRetailInfo.saturation, quality)
+      const finalRes: ResourceData[] = []
+      Array.from(Array(QUALITY_LEVELS).keys()).forEach((quality) => {
+        for (let i = 0; i < encyclopediaOffers.length; i += 2) {
+          const encyclopedia: ResourceEncyclopedia = encyclopediaOffers[i]
+          const offers: ResourceOffer[] = encyclopediaOffers[i + 1]
+
+          const saturationFinal = calculateSaturation(encyclopedia.marketSaturation, quality)
           const price = offers.find((offer) => offer.quality === quality)?.price
 
-          if (RETAIL_MODELING[1][1][resourceRetailInfo.dbLetter as keyof (typeof RETAIL_MODELING)[1][1]] && price) {
+          if (RETAIL_MODELING[1][1][encyclopedia.db_letter as keyof (typeof RETAIL_MODELING)[1][1]] && price) {
             const t = calculateRetailDemand(
-              RETAIL_MODELING[1][1][resourceRetailInfo.dbLetter as keyof (typeof RETAIL_MODELING)[1][1]].xMultiplier,
-              RETAIL_MODELING[1][1][resourceRetailInfo.dbLetter as keyof (typeof RETAIL_MODELING)[1][1]]
-                .marketSaturationDiv,
-              RETAIL_MODELING[1][1][resourceRetailInfo.dbLetter as keyof (typeof RETAIL_MODELING)[1][1]].xOffsetBase,
-              RETAIL_MODELING[1][1][resourceRetailInfo.dbLetter as keyof (typeof RETAIL_MODELING)[1][1]].yMultiplier,
-              RETAIL_MODELING[1][1][resourceRetailInfo.dbLetter as keyof (typeof RETAIL_MODELING)[1][1]].yOffset,
+              RETAIL_MODELING[1][1][encyclopedia.db_letter as keyof (typeof RETAIL_MODELING)[1][1]].xMultiplier,
+              RETAIL_MODELING[1][1][encyclopedia.db_letter as keyof (typeof RETAIL_MODELING)[1][1]].marketSaturationDiv,
+              RETAIL_MODELING[1][1][encyclopedia.db_letter as keyof (typeof RETAIL_MODELING)[1][1]].xOffsetBase,
+              RETAIL_MODELING[1][1][encyclopedia.db_letter as keyof (typeof RETAIL_MODELING)[1][1]].yMultiplier,
+              RETAIL_MODELING[1][1][encyclopedia.db_letter as keyof (typeof RETAIL_MODELING)[1][1]].yOffset,
               price,
               saturationFinal
             )
 
-            resourcesData.push({
-              dbLetter: resourceRetailInfo.dbLetter,
-              averagePrice: resourceRetailInfo.averagePrice,
+            finalRes.push({
+              dbLetter: encyclopedia.db_letter,
+              name: encyclopedia.name,
+              averagePrice: encyclopedia.averageRetailPrice,
               wage: 323,
-              saturation: resourceRetailInfo.saturation,
+              saturation: encyclopedia.marketSaturation,
               saturationFinal: saturationFinal,
               quality: quality,
               price: price,
               t: t
             })
           }
-        })
-      }
-      setResourceData(resourcesData)
+        }
+      })
+      setResourceData(finalRes)
     }
 
     fetchData()
