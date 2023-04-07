@@ -137,7 +137,7 @@ export default function Home() {
         <link rel='icon' href='/favicon.ico' />
       </Head>
       <div className='min-h-screen bg-gray-100 text-gray-900'>
-        <main className='max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-4'>
+        <main className='max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 pt-4'>
           <div className=''>
             <h1 className='text-xl font-semibold'>Economy + Simulation = ❤</h1>
           </div>
